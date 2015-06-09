@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<meta name="description" content="Simplest possible examples of HTML, CSS and JavaScript." />
+<meta name="author" content="//samdutton.com">
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
+<meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1.0, user-scalable=yes">
+<meta itemprop="name" content="simpl.info: simplest possible examples of HTML, CSS and JavaScript">
+<meta itemprop="image" content="/icon_192x192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta id="theme-color" name="theme-color" content="#fff">
+
+<base target="_blank">
+
+<title>MediaStreamTrack.getSources()</title>
+
+<link rel="stylesheet" href="../../css/main.css" />
+
+  <style>
+  div.select {
+    margin: 0 0 1em 0;
+  }
+  </style>
+
+</head>
+
+<body>
+
+<div id="container">
+
+  <h1><a href="../../index.html" title="simpl.info home page">simpl.info</a> MediaStreamTrack.getSources</h1>
+  <div class="select">
+    <label for="videoSource">Video source: </label><select id="videoSource"></select>
+  </div>
+
+  <video id="video" autoplay></video>
+  <button id="snap">Capture</button>
+    <button id="new">New</button>
+    <br/><button id="upload">Upload</button>
+  <canvas id="canvass" width="640" height="480"></canvas>
+<button id="snap">Capture</button>
+</div>
+
+</body>
+</html>
+<script type="text/javascript">
+  'use strict';
+
+var videoElement = document.querySelector('video');
+var videoSelect = document.querySelector('select#videoSource');
+var canvass = document.getElementById("canvass"),
+context = canvass.getContext("2d"),
+video = document.getElementById("video"),
+videoObj = { "video": true },
+        errBack = function(error) {
+          console.log("Video capture error: ", error.code); 
+        };
+navigator.getUserMedia = navigator.getUserMedia ||
+  navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+
+function gotSources(sourceInfos) {
+  for (var i = 0; i !== sourceInfos.length; ++i) {
+    var sourceInfo = sourceInfos[i];
+    var option = document.createElement('option');
+    option.value = sourceInfo.id;
+    if (sourceInfo.kind === 'video') {
+      option.text = sourceInfo.label || 'camera ' + (videoSelect.length + 1);
+      videoSelect.appendChild(option);
+    } else {
+      console.log('Some other kind of source: ', sourceInfo);
+    }
+  }
+}
+
+if (typeof MediaStreamTrack === 'undefined'){
+  alert('This browser does not support MediaStreamTrack.\n\nTry Chrome Canary.');
+} else {
+  MediaStreamTrack.getSources(gotSources);
+}
+
+
+function successCallback(stream) {
+  window.stream = stream; // make stream available to console
+  videoElement.src = window.URL.createObjectURL(stream);
+  videoElement.play();
+}
+
+function errorCallback(error){
+  console.log('navigator.getUserMedia error: ', error);
+}
+
+function start(){
+  if (!!window.stream) {
+    videoElement.src = null;
+    window.stream.stop();
+  }
+  var videoSource = videoSelect.value;
+  var constraints = {
+    video: {
+      optional: [{sourceId: videoSource}]
+    }
+  };
+  navigator.getUserMedia(constraints, successCallback, errorCallback);
+}
+
+videoSelect.onchange = start;
+
+start();
+$('#upload').hide();
+$('#new').hide();
+document.getElementById("snap").addEventListener("click", function() {
+        context.drawImage(video, 0, 0, 640, 480);
+        // Littel effects
+        $('#video').fadeOut('slow');
+        $('#canvass').fadeIn('slow');
+        $('#snap').hide();
+        $('#new').show();
+        // Allso show upload button
+        $('#upload').show();
+      });
+      
+      // Capture New Photo
+      document.getElementById("new").addEventListener("click", function() {
+        $('#video').fadeIn('slow');
+        $('#canvass').fadeOut('slow');
+        $('#snap').show();
+        $('#new').hide();
+      });
+      // Upload image to sever 
+      document.getElementById("upload").addEventListener("click", function(){
+        var dataUrl = canvass.toDataURL();
+        $.ajax({
+          type: "POST",
+          url: "camsave.php",
+          data: { 
+           imgBase64: dataUrl
+          }
+        }).done(function(msg) {
+          console.log('saved');
+          $('#video').fadeIn('slow');
+          $('#canvass').fadeOut('slow');
+        });
+      });
+</script>
